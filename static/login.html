@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เข้าสู่ระบบ | Cyber-sec Project API</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="login-body">
+  <main class="login-wrap">
+    <form class="login-card" id="login-form" autocomplete="on">
+      <span class="logo login-logo">&#9679;</span>
+      <h1>Cyber-sec Project API</h1>
+      <p class="subtitle">Porramee Sririnchai 037-3</p>
+
+      <label for="username">ชื่อผู้ใช้</label>
+      <input id="username" name="username" type="text" value="Admin" autocomplete="username" required />
+
+      <label for="password">รหัสผ่าน</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+      <p class="login-error" id="login-error" hidden></p>
+
+      <button class="login-btn" type="submit" id="login-btn">เข้าสู่ระบบ</button>
+    </form>
+  </main>
+
+  <script src="/static/login.js"></script>
+</body>
+</html>

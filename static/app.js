@@ -86,6 +86,17 @@ document.querySelectorAll("[data-reload]").forEach((button) => {
   button.addEventListener("click", () => loaders[button.dataset.reload](button));
 });
 
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await fetch("/logout", { method: "POST" });
+  window.location.href = "/login";
+});
+
+async function loadUser() {
+  const res = await getJson("/me");
+  document.getElementById("who").textContent = res.user ? `ผู้ใช้: ${res.user}` : "";
+}
+
+loadUser();
 loadUsers();
 loadOrders();
 loadRoot();
