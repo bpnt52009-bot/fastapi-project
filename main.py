@@ -1,13 +1,6 @@
 from fastapi import FastAPI
+import users  # อิมพอร์ตไฟล์ของเพื่อนเข้ามา
 
 app = FastAPI()
 
-# เพิ่ม Endpoint สำหรับหน้าแรก
-@app.get("/")
-def read_root():
-    return {"message": "Hello, FastAPI!"}
-
-# เพิ่ม Endpoint แบบรับพารามิเตอร์
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str | None = None):
-    return {"item_id": item_id, "query": q}
+app.include_router(users.router)  # ดึง API ของเพื่อนมารัน
