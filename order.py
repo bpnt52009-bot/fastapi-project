@@ -6,6 +6,8 @@ router = APIRouter()
 def get_orders():
     return [
         {"order_id": 101, "item": "Mouse", "amount": 2},
-        {"order_id": 102, "item": "Keyboard", "amount": 1}
+        {"order_id": 102, "item": "Keyboard", "amount": 1},
+        {"order_id": 103, "item": "Monitor", "amount": 1}
+
     ]
     

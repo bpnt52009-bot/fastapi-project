@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber-sec Project API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">&#9679;</span>
+      <div>
+        <h1>Cyber-sec Project FAST-API</h1>
+        <p class="subtitle">Porramee Sririnchai 037-3</p>
+        <p class="subtitle">Supakorn Jitdee 010-0</p>
+        <p class="subtitle">Thananop Phungdokmai 050-6</p>
+      </div>
+    </div>
+    <div class="status" id="api-status">
+      <span class="dot"></span>
+      <span id="api-status-text">กำลังตรวจสอบ API...</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="cards" id="summary">
+      <article class="card">
+        <p class="card-label">ผู้ใช้ทั้งหมด</p>
+        <p class="card-value" id="total-users">-</p>
+      </article>
+      <article class="card">
+        <p class="card-label">คำสั่งซื้อทั้งหมด</p>
+        <p class="card-value" id="total-orders">-</p>
+      </article>
+      <article class="card">
+        <p class="card-label">จำนวนสินค้ารวม</p>
+        <p class="card-value" id="total-amount">-</p>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>ผู้ใช้</h2>
+        <button class="btn" data-reload="users">โหลดข้อมูลใหม่</button>
+      </div>
+      <p class="endpoint">GET <code>/users</code></p>
+      <div class="table-wrap">
+        <table id="users-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>ชื่อ</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="empty" id="users-empty" hidden>ไม่มีข้อมูลผู้ใช้</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>คำสั่งซื้อ</h2>
+        <button class="btn" data-reload="orders">โหลดข้อมูลใหม่</button>
+      </div>
+      <p class="endpoint">GET <code>/orders</code></p>
+      <div class="table-wrap">
+        <table id="orders-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>สินค้า</th>
+              <th>จำนวน</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="empty" id="orders-empty" hidden>ไม่มีข้อมูลคำสั่งซื้อ</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>สถานะ API</h2>
+        <button class="btn" data-reload="root">โหลดข้อมูลใหม่</button>
+      </div>
+      <p class="endpoint">GET <code>/</code></p>
+      <pre class="code" id="root-output">-</pre>
+    </section>
+  </main>
+
+  <footer>FastAPI + Static Frontend</footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
