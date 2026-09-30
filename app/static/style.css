@@ -166,6 +166,96 @@ main {
   cursor: progress;
 }
 
+.btn-primary {
+  color: #04121a;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: rgba(56, 232, 198, 0.85);
+}
+
+.btn-danger {
+  color: #ff8f8f;
+  border-color: rgba(255, 143, 143, 0.5);
+}
+
+.btn-danger:hover {
+  background: rgba(255, 143, 143, 0.12);
+}
+
+.btn-small {
+  font-size: 12px;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+
+/* ---------- ฟอร์มสร้างคำสั่งซื้อ ---------- */
+
+.item-row {
+  display: grid;
+  grid-template-columns: 2fr 90px 120px auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.item-row input,
+.row-actions select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  min-width: 0;
+}
+
+.item-row input:focus,
+.row-actions select:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.form-error {
+  color: #ff8f8f;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+@media (max-width: 560px) {
+  .item-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ---------- ตารางคำสั่งซื้อ ---------- */
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(56, 232, 198, 0.12);
+  white-space: nowrap;
+}
+
 .endpoint {
   color: var(--muted);
   font-size: 12px;
@@ -220,7 +310,10 @@ tbody tr:last-child td {
   max-width: 340px;
 }
 
-#orders-table td:nth-child(5) {
+#orders-table th:nth-child(5),
+#orders-table td:nth-child(5),
+#orders-table th:nth-child(6),
+#orders-table td:nth-child(6) {
   white-space: nowrap;
 }
 

@@ -1,9 +1,44 @@
+import re
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
 from app.money import parse_amount, to_cents, to_decimal
+from app.order import ALLOWED_TRANSITIONS
 from app.security import hash_password, sign, unsign, verify_password
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "app" / "static"
+
+
+def read_frontend_status_map():
+    """อ่านตาราง NEXT_STATUS ออกจาก app/static/app.js"""
+    source = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    block = re.search(r"const NEXT_STATUS = \{(.*?)\n\};", source, re.S)
+    assert block, "ไม่พบ NEXT_STATUS ใน app/static/app.js"
+    return {
+        match.group(1): [
+            item.strip().strip('"') for item in match.group(2).split(",") if item.strip()
+        ]
+        for match in re.finditer(r"(\w+):\s*\[(.*?)\]", block.group(1))
+    }
+
+
+class TestFrontendBackendContract:
+    def test_next_status_matches_backend_transitions(self):
+        """กันไม่ให้ dropdown ในหน้าเว็บหลุดจากกฎของ backend"""
+        frontend = read_frontend_status_map()
+        backend = {
+            status.value: sorted(next_values)
+            for status, next_values in ALLOWED_TRANSITIONS.items()
+        }
+        for status_value, allowed in backend.items():
+            assert set(frontend.get(status_value, [])) == set(allowed), status_value
+
+    def test_frontend_labels_cover_every_status(self):
+        source = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+        for status_value in ALLOWED_TRANSITIONS:
+            assert f'{status_value}: "' in source, f"ไม่มี label สำหรับสถานะ {status_value}"
 
 
 class TestSettingsLoading:

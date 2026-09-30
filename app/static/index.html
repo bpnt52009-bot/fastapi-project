@@ -46,6 +46,22 @@
 
     <section class="panel">
       <div class="panel-head">
+        <h2>สร้างคำสั่งซื้อ</h2>
+      </div>
+      <p class="endpoint">POST <code>/orders</code></p>
+
+      <form id="order-form">
+        <div id="item-rows"></div>
+        <div class="form-actions">
+          <button class="btn" type="button" id="add-item-btn">+ เพิ่มสินค้า</button>
+          <button class="btn btn-primary" type="submit" id="create-order-btn">สร้างคำสั่งซื้อ</button>
+        </div>
+        <p class="form-error" id="order-error" hidden></p>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
         <h2>ผู้ใช้</h2>
         <button class="btn" data-reload="users">โหลดข้อมูลใหม่</button>
       </div>
@@ -69,17 +85,18 @@
         <h2>คำสั่งซื้อ</h2>
         <button class="btn" data-reload="orders">โหลดข้อมูลใหม่</button>
       </div>
-      <p class="endpoint">GET <code>/orders</code></p>
+      <p class="endpoint">GET <code>/orders</code> · PATCH <code>/orders/&#123;id&#125;/status</code> · DELETE <code>/orders/&#123;id&#125;</code></p>
       <div class="table-wrap">
         <table id="orders-table">
           <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>สินค้า</th>
-            <th>จำนวน</th>
-            <th>ยอดรวม</th>
-            <th>สถานะ</th>
-          </tr>
+            <tr>
+              <th>Order ID</th>
+              <th>สินค้า</th>
+              <th>จำนวน</th>
+              <th>ยอดรวม</th>
+              <th>สถานะ</th>
+              <th>จัดการ</th>
+            </tr>
           </thead>
           <tbody></tbody>
         </table>
