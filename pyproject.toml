@@ -1,0 +1,27 @@
+[project]
+name = "cyber-sec-project-api"
+version = "1.0.0"
+description = "FastAPI order management demo with cookie authentication"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "C4", "SIM", "RUF"]
+ignore = [
+    "B008",   # FastAPI Depends()/Query() ใน default argument
+    "S101",   # assert ในเทสต์
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S106", "S105"]
+
+[tool.ruff.format]
+quote-style = "double"
