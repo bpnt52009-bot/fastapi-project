@@ -11,7 +11,8 @@ form.addEventListener("submit", async (event) => {
   try {
     const res = await fetch("/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         username: document.getElementById("username").value,
         password: document.getElementById("password").value,
@@ -23,8 +24,17 @@ form.addEventListener("submit", async (event) => {
       return;
     }
 
-    const data = await res.json().catch(() => ({}));
-    showError(data.detail || "เข้าสู่ระบบไม่สำเร็จ");
+    let message = "เข้าสู่ระบบไม่สำเร็จ";
+    if (res.status === 429) {
+      const retryAfter = Number(res.headers.get("Retry-After"));
+      message = retryAfter
+        ? `ลองใส่รหัสผ่านผิดบ่อยเกินไป กรุณารออีก ${retryAfter} วินาที`
+        : message;
+    } else {
+      const data = await res.json().catch(() => null);
+      if (data && data.detail) message = data.detail;
+    }
+    showError(message);
   } catch (err) {
     showError(`เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ: ${err.message}`);
   } finally {

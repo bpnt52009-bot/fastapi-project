@@ -209,6 +209,21 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* ตารางคำสั่งซื้อ: จำนวน/ยอดรวม ชิดขวา ส่วนชื่อสินค้าตัดบรรทัดได้ */
+#orders-table td:nth-child(3),
+#orders-table td:nth-child(4) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+#orders-table td:nth-child(2) {
+  max-width: 340px;
+}
+
+#orders-table td:nth-child(5) {
+  white-space: nowrap;
+}
+
 .empty {
   color: var(--muted);
   font-size: 14px;
