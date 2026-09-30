@@ -8,3 +8,8 @@ env/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# ฐานข้อมูล local มีรหัสผ่านแบบ hash และ token อยู่ ห้าม commit
+*.db
+*.db-wal
+*.db-shm
