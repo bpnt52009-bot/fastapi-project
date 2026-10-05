@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT    NOT NULL UNIQUE,
     password_hash TEXT    NOT NULL,
+    role          TEXT    NOT NULL DEFAULT 'user',
     created_at    INTEGER NOT NULL
 );
 
@@ -102,6 +103,25 @@ def _migrate_legacy_orders(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE orders RENAME TO orders_legacy_v1")
 
 
+def _column_names(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _migrate_users_role(conn: sqlite3.Connection) -> None:
+    """เพิ่มคอลัมน์ role ให้ฐานข้อมูลเวอร์ชันก่อนที่ยังไม่มี (idempotent)"""
+    existing = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    ).fetchone()
+    if existing is None:
+        return
+    if "role" in _column_names(conn, "users"):
+        return
+    conn.execute(
+        "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'"
+    )
+    logger.info("migrate: เพิ่มคอลัมน์ users.role (ค่าเริ่มต้น 'user')")
+
+
 def _resolve_secret_key(conn: sqlite3.Connection) -> str:
     """ใช้ค่าจาก env ถ้ามี ไม่งั้นอ่าน/สร้างค่าถาวรไว้ในฐานข้อมูล (ไม่ให้ session หลุดทุกครั้งที่ restart)"""
     if settings.secret_key:
@@ -133,9 +153,11 @@ def _bootstrap_admin(conn: sqlite3.Connection) -> None:
 
     conn.execute(
         """
-        INSERT INTO users (username, password_hash, created_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT (username) DO UPDATE SET password_hash = excluded.password_hash
+        INSERT INTO users (username, password_hash, role, created_at)
+        VALUES (?, ?, 'admin', ?)
+        ON CONFLICT (username) DO UPDATE SET
+            password_hash = excluded.password_hash,
+            role = 'admin'
         """,
         (
             settings.admin_username,
@@ -156,6 +178,7 @@ def init_db() -> None:
             conn.execute("PRAGMA journal_mode = WAL")
             _migrate_legacy_orders(conn)
             conn.executescript(SCHEMA)
+            _migrate_users_role(conn)
             _resolve_secret_key(conn)
             _bootstrap_admin(conn)
             conn.commit()

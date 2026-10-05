@@ -61,14 +61,19 @@ def client(make_client):
 
 @pytest.fixture
 def make_user():
-    def _make(username: str, password: str) -> None:
+    def _make(username: str, password: str, role: str = "user") -> None:
         with db.get_conn() as conn:
             conn.execute(
-                "INSERT INTO users (username, password_hash, created_at)"
-                " VALUES (?, ?, ?)"
+                "INSERT INTO users (username, password_hash, role, created_at)"
+                " VALUES (?, ?, ?, ?)"
                 " ON CONFLICT (username) DO UPDATE SET"
                 "   password_hash = excluded.password_hash",
-                (username, hash_password(password, rounds=1_000), int(time.time())),
+                (
+                    username,
+                    hash_password(password, rounds=1_000),
+                    role,
+                    int(time.time()),
+                ),
             )
 
     return _make

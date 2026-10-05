@@ -232,5 +232,9 @@ class TestUsers:
 
     def test_list_users(self, admin_client):
         body = admin_client.get("/users").json()
-        assert {"id", "name"} == set(body[0])
+        assert {"id", "name", "role", "created_at"} == set(body[0])
         assert "Admin" in [u["name"] for u in body]
+
+    def test_env_admin_has_admin_role(self, admin_client):
+        by_name = {u["name"]: u for u in admin_client.get("/users").json()}
+        assert by_name["Admin"]["role"] == "admin"

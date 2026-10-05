@@ -152,7 +152,28 @@ def require_user(request: Request) -> str:
     return username
 
 
+def is_admin(username: str) -> bool:
+    """เช็ค role จากฐานข้อมูล ไม่เชื่อค่าที่ส่งมาจาก client"""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT role FROM users WHERE username = ?", (username,)
+        ).fetchone()
+    return row is not None and row["role"] == "admin"
+
+
+def require_admin(request: Request) -> str:
+    """Dependency: ต้องล็อกอิน และต้องเป็นผู้ดูแลระบบ (401 ถ้ายังไม่ล็อกอิน, 403 ถ้าไม่ใช่ admin)"""
+    username = require_user(request)
+    if not is_admin(username):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ต้องเป็นผู้ดูแลระบบเท่านั้น",
+        )
+    return username
+
+
 CurrentUser = Depends(require_user)
+CurrentAdmin = Depends(require_admin)
 
 
 @router.get("/login", include_in_schema=False)

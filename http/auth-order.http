@@ -1,0 +1,120 @@
+### REST Client: ทดสอบ Auth + Orders
+### คลิก Send Request ที่ข้อ 2 (Login) ก่อน แล้วค่อยทำข้ออื่น
+
+@base_url = http://127.0.0.1:8000
+@admin_user = Admin
+### ห้ามใส่รหัสผ่านจริงในไฟล์นี้ เพราะไฟล์นี้ถูก commit ขึ้น repo สาธารณะ
+@admin_pass = <ใส่รหัสผ่าน admin>
+
+@item_name = เมาส์
+@quantity = 2
+@price = 499.00
+
+
+### 1) Health check (public)
+GET {{base_url}}/health
+
+
+### 2) หน้าแรก (public)
+GET {{base_url}}/
+
+
+### 3) เข้าสู่ระบบ -> 200 + cookie session
+POST {{base_url}}/login
+Content-Type: application/json
+
+{
+  "username": "{{admin_user}}",
+  "password": "{{admin_pass}}"
+
+
+### 4) ข้อมูลผู้ที่ล็อกอินอยู่ -> 200
+GET {{base_url}}/me
+
+
+### 5) เข้าหน้า UI (ต้องล็อกอิน) -> 200 HTML
+GET {{base_url}}/ui
+
+
+### 6) สร้างออเดอร์ -> 201
+POST {{base_url}}/orders
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "item_name": "{{item_name}}",
+      "quantity": {{quantity}},
+      "price": {{price}}
+    }
+  ]
+
+
+### 7) รายการออเดอร์ของฉัน -> 200
+GET {{base_url}}/orders
+
+
+### 8) กรองตามสถานะ -> 200
+GET {{base_url}}/orders?status=pending
+
+
+### 9) เปลี่ยนสถานะเป็น paid -> 200
+PATCH {{base_url}}/orders/1/status
+Content-Type: application/json
+
+{
+  "status": "paid"
+}
+
+
+### 10) ย้อนสถานะกลับ (paid -> pending) -> คาดหวัง 409
+PATCH {{base_url}}/orders/1/status
+Content-Type: application/json
+
+{
+  "status": "pending"
+}
+
+
+### 11) ดูออเดอร์รายคน -> 200
+GET {{base_url}}/orders/1
+
+
+### 12) จำนวนสินค้าเป็น 0 -> คาดหวัง 422
+POST {{base_url}}/orders
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "item_name": "เมาส์",
+      "quantity": 0,
+      "price": 499.00
+    }
+  ]
+
+
+### 13) ราคาติดลบ -> คาดหวัง 422
+POST {{base_url}}/orders
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "item_name": "เมาส์",
+      "quantity": 1,
+      "price": -10.00
+    }
+  ]
+
+
+### 14) ยกเลิกออเดอร์ -> 200
+DELETE {{base_url}}/orders/1
+
+
+### 15) ออกจากระบบ -> 200
+POST {{base_url}}/logout
+
+
+### 16) เรียก /me หลัง logout -> คาดหวัง 401
+GET {{base_url}}/me

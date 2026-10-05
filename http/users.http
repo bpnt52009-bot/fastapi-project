@@ -1,0 +1,195 @@
+### REST Client: ทดสอบส่วนผู้ใช้ (Users)
+### วิธีใช้: คลิกขวาบนบรรทัด "POST {{base_url}}/login" แล้วเลือก Send Request
+### ค่า base_url เปลี่ยนได้ที่บรรทัด @base_url ด้านล่าง
+
+@base_url = http://127.0.0.1:8000
+@admin_user = Admin
+### ห้ามใส่รหัสผ่านจริงในไฟล์นี้ เพราะไฟล์นี้ถูก commit ขึ้น repo สาธารณะ
+### ใส่รหัสจริงตอนทดสอบในเครื่อง หรือใช้ REST Client environment ที่ไม่ถูก commit
+@admin_pass = <ใส่รหัสผ่าน admin>
+@test_pass = alice-pass-123
+
+
+### 1) Health check (public)
+GET {{base_url}}/health
+
+
+### 2) Login ด้วยรหัสผิด -> คาดหวัง 401
+# @no-cookie-jar
+POST {{base_url}}/login
+Content-Type: application/json
+
+{
+  "username": "{{admin_user}}",
+  "password": "wrong-password"
+}
+
+
+### 3) Login เป็น Admin -> 200 + cookie session (คลิก Send Request ที่นี่ก่อนข้ออื่น)
+POST {{base_url}}/login
+Content-Type: application/json
+
+{
+  "username": "{{admin_user}}",
+  "password": "{{admin_pass}}"
+
+
+### 4) ดูผู้ใช้ที่ล็อกอินอยู่ -> 200
+GET {{base_url}}/users/me
+
+
+### 5) รายชื่อผู้ใช้ทั้งหมด (admin เท่านั้น) -> 200
+GET {{base_url}}/users
+
+
+### 6) ดูผู้ใช้รายคน -> 200
+GET {{base_url}}/users/1
+
+
+### 7) ดูผู้ใช้ที่ไม่มีอยู่ -> คาดหวัง 404
+GET {{base_url}}/users/9999
+
+
+### 8) เลข id ผิดรูปแบบ -> คาดหวัง 422
+GET {{base_url}}/users/abc
+
+
+### 9) สร้างผู้ใช้ใหม่ -> 201
+# @name createUser
+POST {{base_url}}/users
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "{{test_pass}}",
+  "role": "user"
+}
+
+
+### 10) สร้างผู้ใช้ชื่อซ้ำ -> คาดหวัง 409
+POST {{base_url}}/users
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "{{test_pass}}"
+}
+
+
+### 11) รหัสผ่านสั้นเกิน 8 ตัวอักษร -> คาดหวัง 422
+POST {{base_url}}/users
+Content-Type: application/json
+
+{
+  "username": "bob",
+  "password": "123"
+}
+
+
+### 12) role ที่ไม่มีอยู่จริง -> คาดหวัง 422
+POST {{base_url}}/users
+Content-Type: application/json
+
+{
+  "username": "bob",
+  "password": "{{test_pass}}",
+  "role": "superuser"
+}
+
+
+### 13) ชื่อผู้ใช้เป็นช่องว่างล้วน -> คาดหวัง 422
+POST {{base_url}}/users
+Content-Type: application/json
+
+{
+  "username": "   ",
+  "password": "{{test_pass}}"
+}
+
+
+### 14) แก้ role ของ alice -> 200
+### ใช้ id จากข้อ 9 (ปกติ alice ได้ id 2 แต่ให้เช็คจาก GET /users ดีกว่า)
+PATCH {{base_url}}/users/2
+Content-Type: application/json
+
+{
+  "role": "admin"
+}
+
+
+### 15) เปลี่ยนชื่อผู้ใช้ -> 200
+PATCH {{base_url}}/users/2
+Content-Type: application/json
+
+{
+  "username": "alice-renamed"
+}
+
+
+### 16) รีเซ็ตรหัสผ่าน -> 200 (session เดิมจะถูก revoke)
+PATCH {{base_url}}/users/2
+Content-Type: application/json
+
+{
+  "password": "brand-new-pass-9"
+}
+
+
+### 17) แก้ทีละช่อง (เปลี่ยนชื่อ + role ในคำขอเดียว) -> 200
+PATCH {{base_url}}/users/2
+Content-Type: application/json
+
+{
+  "username": "alice2",
+  "role": "user"
+}
+
+
+### 18) ส่ง body ว่าง -> คาดหวัง 422
+PATCH {{base_url}}/users/2
+Content-Type: application/json
+
+{}
+
+
+### 19) ตั้งชื่อซ้ำกับผู้ใช้อื่น -> คาดหวัง 409
+PATCH {{base_url}}/users/2
+Content-Type: application/json
+
+{
+  "username": "Admin"
+}
+
+
+### 20) ลดสิทธิ์ของบัญชีที่ล็อกอินอยู่เอง -> คาดหวัง 409
+PATCH {{base_url}}/users/1
+Content-Type: application/json
+
+{
+  "role": "user"
+}
+
+
+### 21) ลบผู้ใช้ที่ไม่มีอยู่ -> คาดหวัง 404
+DELETE {{base_url}}/users/9999
+
+
+### 22) ลบผู้ใช้ -> 200 (session ของเขาจะถูก revoke)
+DELETE {{base_url}}/users/2
+
+
+### 23) ลบบัญชีที่ล็อกอินอยู่เอง -> คาดหวัง 409
+DELETE {{base_url}}/users/1
+
+
+### 24) Logout -> 200
+POST {{base_url}}/logout
+
+
+### 25) เรียก /me หลัง logout -> คาดหวัง 401
+GET {{base_url}}/me
+
+
+### 26) เรียก /users โดยไม่มี cookie -> คาดหวัง 401
+# @no-cookie-jar
+GET {{base_url}}/users
