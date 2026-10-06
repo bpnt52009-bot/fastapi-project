@@ -1,0 +1,117 @@
+### ============================================
+### Cyber-sec FAST-API - Read-only user check
+### URL: http://localhost:8000
+### ============================================
+### ใช้ตรวจว่าผู้ใช้ทั่วไป (role=user) ทำอะไรไม่ได้นอกจากดูข้อมูล
+###
+### !!! อย่าเปิดพร้อมกับ api.http !!!
+### ทั้งสองไฟล์ใช้ host เดียวกัน cookie จะชนกัน - ให้ login เป็นคนนี้แล้วค่อยทดสอบ
+###   ถ้าจะกลับไปทดสอบฝั่ง admin ให้กดข้อ 5.1 (Logout) แล้ว login ใหม่
+###
+### ต้องมีผู้ใช้ชื่อ {{demoUser}} อยู่ก่อน
+###   ถ้ายังไม่มี ให้รัน api.http ข้อ 1.1 (login admin) แล้ว 1.3 (สร้าง user) ก่อน
+### ============================================
+
+@host = http://localhost:8000
+@demoUser = somchai
+@demoUserPass = somchai-1234
+
+## 1. Login as normal user
+
+### 1.1 [User] Login - ต้องได้ 200
+POST {{host}}/login
+Content-Type: application/json
+
+{
+    "username": "{{demoUser}}",
+    "password": "{{demoUserPass}}"
+}
+
+### 1.2 [User] โปรไฟล์ตัวเอง - ต้องเห็น role = "user"
+GET {{host}}/users/me
+
+
+### ============================================
+## 2. อ่านได้ (สิทธิ์ที่ user มี)
+### ============================================
+
+### 2.1 [User] ดูออเดอร์ของตัวเอง - ต้องได้ 200
+GET {{host}}/orders
+
+### 2.2 [User] ดูออเดอร์ตัวเองแบบมี slash ท้าย - ต้องได้ 200 (ไม่ใช่ 307)
+GET {{host}}/orders/
+
+### 2.3 [User] ดูออเดอร์ของตัวเองที่กรองสถานะ
+GET {{host}}/orders?status=pending
+
+
+### ============================================
+## 3. อ่านไม่ได้ / ทำไม่ได้ (ต้องได้ 403 ทุกข้อ)
+### ============================================
+
+### 3.1 [User] ดูผู้ใช้ทั้งหมด - ต้องได้ 403
+GET {{host}}/users
+
+### 3.2 [User] ดูผู้ใช้ตาม id - ต้องได้ 403
+GET {{host}}/users/1
+
+### 3.3 [User] สร้างผู้ใช้ใหม่ - ต้องได้ 403
+POST {{host}}/users
+Content-Type: application/json
+
+{
+    "username": "hacker",
+    "password": "hacker-pass-1",
+    "role": "admin"
+}
+
+### 3.4 [User] เปลี่ยนสิทธิ์ตัวเองเป็น admin - ต้องได้ 403
+PATCH {{host}}/users/{{demoUser}}
+Content-Type: application/json
+
+{
+    "role": "admin"
+}
+
+### 3.5 [User] ลบบัญชี admin - ต้องได้ 403
+DELETE {{host}}/users/1
+
+### 3.6 [User] สร้างคำสั่งซื้อ - ต้องได้ 403
+POST {{host}}/orders
+Content-Type: application/json
+
+{
+    "items": [
+        { "item_name": "เมาส์", "quantity": 1, "price": "499.00" }
+    ]
+}
+
+### 3.7 [User] เปลี่ยนสถานะออเดอร์ - ต้องได้ 403
+PATCH {{host}}/orders/1/status
+Content-Type: application/json
+
+{
+    "status": "paid"
+}
+
+### 3.8 [User] ยกเลิกออเดอร์ - ต้องได้ 403
+DELETE {{host}}/orders/1
+
+### 3.9 [User] กรองออเดอร์ของคนอื่น - ต้องได้ 403
+### (ถ้าให้ 200 แปลว่า leak ข้อมูล - เป็นช่องโหว่)
+GET {{host}}/orders?user={{$dotenv ADMIN_USERNAME}}
+
+### 3.10 [User] อ่านออเดอร์ของคนอื่น - ต้องได้ 404
+### (ใช้ 404 ไม่ใช่ 403 เพื่อไม่บอกว่ามี order นั้นอยู่จริงหรือเปล่า)
+GET {{host}}/orders/1
+
+
+### ============================================
+## 4. Logout
+### ============================================
+
+### 4.1 [User] Logout - ต้องได้ 200
+POST {{host}}/logout
+
+### 4.2 [ทดสอบ] หลัง logout ใช้ session เดิมต่อไม่ได้ - ต้องได้ 401
+GET {{host}}/orders
