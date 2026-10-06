@@ -7,6 +7,7 @@ import pytest
 from app.money import parse_amount, to_cents, to_decimal
 from app.order import ALLOWED_TRANSITIONS
 from app.security import hash_password, sign, unsign, verify_password
+from app.users import UserRole
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "app" / "static"
 
@@ -39,6 +40,26 @@ class TestFrontendBackendContract:
         source = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
         for status_value in ALLOWED_TRANSITIONS:
             assert f'{status_value}: "' in source, f"ไม่มี label สำหรับสถานะ {status_value}"
+
+    def test_frontend_labels_cover_every_role(self):
+        source = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+        for role in UserRole:
+            assert f"{role.value}: " in source, f"ไม่มี label สำหรับสิทธิ์ {role.value}"
+
+    def test_frontend_role_select_matches_backend_enum(self):
+        """ค่าใน <select> ของฟอร์มเพิ่มผู้ใช้ต้องเป็น role ที่ backend รับได้จริง"""
+        html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+        options = set(re.findall(r'<option value="(\w+)"', html))
+        accepted = {role.value for role in UserRole}
+        assert options <= accepted, f"พบ role ที่ backend ไม่รู้จัก: {options - accepted}"
+        assert accepted <= options, f"role ที่ backend รองรับแต่หน้าเว็บไม่มี: {accepted - options}"
+
+    def test_admin_only_sections_are_marked_in_html(self):
+        """ทุกส่วนที่ต้องเป็น admin เท่านั้นต้องมี data-admin-only ให้ JS ซ่อนได้"""
+        html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+        for marker in ('id="user-form"', 'id="users-table"', 'id="order-owner"'):
+            assert marker in html, f"ไม่พบ {marker} ใน index.html"
+        assert html.count("data-admin-only") >= 3
 
 
 class TestSettingsLoading:

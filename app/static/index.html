@@ -20,6 +20,7 @@
     </div>
     <div class="topbar-actions">
       <span class="who" id="who"></span>
+      <span class="badge" id="who-role" hidden></span>
       <div class="status" id="api-status">
         <span class="dot"></span>
         <span id="api-status-text">กำลังตรวจสอบ API...</span>
@@ -44,13 +45,19 @@
       </article>
     </section>
 
-    <section class="panel">
+    <p class="notice" id="role-notice" hidden></p>
+
+    <section class="panel" data-admin-only hidden>
       <div class="panel-head">
         <h2>สร้างคำสั่งซื้อ</h2>
       </div>
       <p class="endpoint">POST <code>/orders</code></p>
 
       <form id="order-form">
+        <label class="field">
+          <span>เจ้าของออเดอร์</span>
+          <select id="order-owner" aria-label="เจ้าของออเดอร์"></select>
+        </label>
         <div id="item-rows"></div>
         <div class="form-actions">
           <button class="btn" type="button" id="add-item-btn">+ เพิ่มสินค้า</button>
@@ -60,18 +67,35 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="users-panel" data-admin-only hidden>
       <div class="panel-head">
         <h2>ผู้ใช้</h2>
         <button class="btn" data-reload="users">โหลดข้อมูลใหม่</button>
       </div>
-      <p class="endpoint">GET <code>/users</code></p>
+      <p class="endpoint">GET <code>/users</code> · POST <code>/users</code> · PATCH <code>/users/&#123;id&#125;</code> · DELETE <code>/users/&#123;id&#125;</code></p>
+
+      <form id="user-form">
+        <div class="user-row">
+          <input type="text" id="new-username" placeholder="ชื่อผู้ใช้" maxlength="64" autocomplete="off" aria-label="ชื่อผู้ใช้ใหม่" />
+          <input type="password" id="new-password" placeholder="รหัสผ่าน (อย่างน้อย 8 ตัว)" minlength="8" maxlength="256" autocomplete="new-password" aria-label="รหัสผ่านของผู้ใช้ใหม่" />
+          <select id="new-role" aria-label="สิทธิ์ของผู้ใช้ใหม่">
+            <option value="user">user — ดูข้อมูลอย่างเดียว</option>
+            <option value="admin">admin — จัดการได้ทั้งหมด</option>
+          </select>
+          <button class="btn btn-primary" type="submit" id="create-user-btn">+ เพิ่มผู้ใช้</button>
+        </div>
+        <p class="form-hint">สร้างให้ยาวอย่างน้อย 8 ตัว · เปลี่ยนสิทธิ์หรือรหัสผ่านทีหลังได้ด้วย <code>PATCH /users/&#123;id&#125;</code> โดย session เดิมจะถูกยกเลิกให้อัตโนมัติ</p>
+        <p class="form-error" id="user-error" hidden></p>
+      </form>
+
       <div class="table-wrap">
         <table id="users-table">
           <thead>
             <tr>
               <th>ID</th>
               <th>ชื่อ</th>
+              <th>สิทธิ์</th>
+              <th>จัดการ</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -83,7 +107,12 @@
     <section class="panel">
       <div class="panel-head">
         <h2>คำสั่งซื้อ</h2>
-        <button class="btn" data-reload="orders">โหลดข้อมูลใหม่</button>
+        <div class="head-actions">
+          <select id="owner-filter" data-admin-only hidden aria-label="กรองตามเจ้าของออเดอร์">
+            <option value="">ทุกเจ้าของ</option>
+          </select>
+          <button class="btn" data-reload="orders">โหลดข้อมูลใหม่</button>
+        </div>
       </div>
       <p class="endpoint">GET <code>/orders</code> · PATCH <code>/orders/&#123;id&#125;/status</code> · DELETE <code>/orders/&#123;id&#125;</code></p>
       <div class="table-wrap">
@@ -91,6 +120,7 @@
           <thead>
             <tr>
               <th>Order ID</th>
+              <th>เจ้าของ</th>
               <th>สินค้า</th>
               <th>จำนวน</th>
               <th>ยอดรวม</th>

@@ -168,6 +168,35 @@ class TestUpdateUser:
         assert admin_client.patch("/users/9999", json={"role": "user"}).status_code == 404
 
 
+class TestReservedAdminName:
+    """ชื่อผู้ดูแลระบบใน env ถูกสงวนไว้ กันไม่ให้ยึดชื่อแล้วถูกยกสิทธิ์ตอน restart"""
+
+    def test_cannot_create_user_with_reserved_name(self, admin_client):
+        assert admin_client.post(
+            "/users", json={**TEST_NEW_USER, "username": "Admin"}
+        ).status_code == 409
+
+    def test_cannot_rename_user_to_reserved_name(self, admin_client):
+        created = admin_client.post("/users", json=TEST_NEW_USER).json()
+        response = admin_client.patch(
+            f"/users/{created['id']}", json={"username": "Admin"}
+        )
+        assert response.status_code == 409
+        assert "สงวนไว้" in response.json()["detail"]
+        assert find_user(admin_client, TEST_NEW_USER["username"])["name"] == "alice"
+
+    def test_reserved_name_follows_the_env_setting(self, admin_client, monkeypatch):
+        from app.config import settings
+
+        monkeypatch.setattr(settings, "admin_username", "Root")
+        response = admin_client.post(
+            "/users", json={**TEST_NEW_USER, "username": "Root"}
+        )
+        assert response.status_code == 409
+        # ชื่อเดิมยังใช้ได้ตามปกติ
+        assert admin_client.post("/users", json=TEST_NEW_USER).status_code == 201
+
+
 class TestDeleteUser:
     def test_admin_can_delete(self, admin_client):
         created = admin_client.post("/users", json=TEST_NEW_USER).json()

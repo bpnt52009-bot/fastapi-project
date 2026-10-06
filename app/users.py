@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.auth import require_admin, require_user
+from app.config import settings
 from app.db import get_conn
 from app.security import hash_password
 
@@ -128,6 +129,12 @@ def list_users(_: str = Depends(require_admin)):
     include_in_schema=False,
 )
 def create_user(payload: UserCreate, _: str = Depends(require_admin)):
+    if payload.username == settings.admin_username:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"ชื่อ '{settings.admin_username}' ถูกสงวนไว้สำหรับผู้ดูแลระบบ",
+        )
+
     password_hash = hash_password(payload.password)
     now = int(time.time())
 
@@ -172,6 +179,14 @@ def update_user(
         row = _require_user_row(conn, user_id)
 
         if "username" in changes:
+            # ชื่อผู้ดูแลระบบถูกสงวนไว้ เพราะตอน restart bootstrap จะรีเซ็ตรหัสผ่าน
+            # และสิทธิ์ของชื่อนี้เป็น admin เสมอ (ดู app/db.py) — ต้องเช็คก่อน clash
+            if changes["username"] == settings.admin_username:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"ชื่อ '{settings.admin_username}' ถูกสงวนไว้สำหรับผู้ดูแลระบบ",
+                )
+
             clash = conn.execute(
                 "SELECT 1 FROM users WHERE username = ? AND id != ?",
                 (changes["username"], user_id),

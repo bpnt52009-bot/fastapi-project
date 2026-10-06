@@ -3,8 +3,12 @@ import pytest
 DEFAULT_ITEM = {"item_name": "เมาส์", "quantity": 2, "price": "499.00"}
 
 
-def create_order(client, items=None):
-    return client.post("/orders", json={"items": items or [DEFAULT_ITEM]})
+def create_order(client, items=None, owner=None):
+    """สร้างออเดอร์ผ่านผู้ดูแลระบบ ถ้าระบุ owner จะผูกออเดอร์ให้เป็นของผู้ใช้คนนั้น"""
+    body = {"items": items or [DEFAULT_ITEM]}
+    if owner is not None:
+        body["user_id"] = owner
+    return client.post("/orders", json=body)
 
 
 class TestAuthz:
@@ -194,36 +198,67 @@ class TestDelete:
 
 
 class TestOwnershipIsolation:
-    def test_each_user_sees_only_their_own_orders(self, admin_client, other_client):
+    def test_user_sees_only_own_but_admin_sees_everything(self, admin_client, other_client):
         mine = create_order(admin_client).json()["id"]
-        theirs = create_order(other_client).json()["id"]
+        theirs = create_order(admin_client, owner="Other").json()["id"]
 
-        assert [o["id"] for o in admin_client.get("/orders").json()["items"]] == [mine]
-        assert [o["id"] for o in other_client.get("/orders").json()["items"]] == [theirs]
+        seen_by_other = [
+            o["id"] for o in other_client.get("/orders").json()["items"]
+        ]
+        assert seen_by_other == [theirs]
 
-    def test_other_user_gets_404_for_a_foreign_order(self, admin_client, other_client):
-        order_id = create_order(admin_client).json()["id"]
+        seen_by_admin = [o["id"] for o in admin_client.get("/orders").json()["items"]]
+        assert set(seen_by_admin) == {mine, theirs}
 
-        assert other_client.get(f"/orders/{order_id}").status_code == 404
+    def test_user_cannot_mutate_orders_at_all(self, admin_client, other_client):
+        order_id = create_order(admin_client, owner="Other").json()["id"]
+
+        # ผู้ใช้ทั่วไปไม่มีสิทธิ์เปลี่ยนแปลงอะไรได้เลย
+        assert other_client.post("/orders", json={"items": [DEFAULT_ITEM]}).status_code == 403
         assert (
             other_client.patch(
                 f"/orders/{order_id}/status", json={"status": "paid"}
             ).status_code
-            == 404
+            == 403
         )
-        assert other_client.delete(f"/orders/{order_id}").status_code == 404
+        assert other_client.delete(f"/orders/{order_id}").status_code == 403
 
-        # ของเจ้าของเดิมยังอยู่ครบ ไม่ถูกลบไป
+        # แต่ยังอ่านออเดอร์ของตัวเองได้
+        assert other_client.get(f"/orders/{order_id}").status_code == 200
+
+    def test_user_cannot_read_or_change_a_foreign_order(self, admin_client, other_client):
+        order_id = create_order(admin_client).json()["id"]
+
+        assert other_client.get(f"/orders/{order_id}").status_code == 404
+
+        # ของเจ้าของเดิมยังอยู่ครบ ไม่ถูกแตะต้อง
         assert admin_client.get(f"/orders/{order_id}").status_code == 200
         assert admin_client.get(f"/orders/{order_id}").json()["status"] == "pending"
 
     def test_status_filter_does_not_leak_counts(self, admin_client, other_client):
         create_order(admin_client)
         create_order(admin_client)
-        create_order(other_client)
+        create_order(admin_client, owner="Other")
 
-        assert admin_client.get("/orders", params={"status": "pending"}).json()["total"] == 2
+        assert admin_client.get("/orders", params={"status": "pending"}).json()["total"] == 3
         assert other_client.get("/orders", params={"status": "pending"}).json()["total"] == 1
+
+    def test_non_admin_cannot_filter_by_other_owner(self, other_client):
+        assert other_client.get("/orders", params={"user": "Admin"}).status_code == 403
+
+    def test_admin_can_filter_by_owner(self, admin_client, other_client):
+        mine = create_order(admin_client).json()["id"]
+        theirs = create_order(admin_client, owner="Other").json()["id"]
+
+        body = admin_client.get("/orders", params={"user": "Other"}).json()
+        assert [o["id"] for o in body["items"]] == [theirs]
+        assert body["total"] == 1
+        assert mine not in [o["id"] for o in body["items"]]
+
+    def test_create_order_rejects_unknown_owner(self, admin_client):
+        response = create_order(admin_client, owner="ไม่มีผู้ใช้นี้")
+        assert response.status_code == 404
+        assert "ไม่พบผู้ใช้" in response.json()["detail"]
 
 
 class TestUsers:

@@ -192,16 +192,39 @@ main {
   white-space: nowrap;
 }
 
-/* ---------- ฟอร์มสร้างคำสั่งซื้อ ---------- */
+/* ---------- ฟอร์มสร้างคำสั่งซื้อ / เพิ่มผู้ใช้ ---------- */
 
-.item-row {
+.item-row,
+.user-row {
   display: grid;
-  grid-template-columns: 2fr 90px 120px auto;
   gap: 8px;
   margin-bottom: 8px;
+  align-items: center;
+}
+
+.item-row {
+  grid-template-columns: 2fr 90px 120px auto;
+}
+
+.user-row {
+  grid-template-columns: 2fr 2fr 200px auto;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 .item-row input,
+.user-row input,
+.user-row select,
+.field select,
+.head-actions select,
 .row-actions select {
   font: inherit;
   font-size: 14px;
@@ -214,9 +237,42 @@ main {
 }
 
 .item-row input:focus,
+.user-row input:focus,
+.user-row select:focus,
+.field select:focus,
+.head-actions select:focus,
 .row-actions select:focus {
   outline: 1px solid var(--accent);
   border-color: var(--accent);
+}
+
+.field select,
+.head-actions select {
+  width: auto;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.form-hint {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 4px 0 0;
+  line-height: 1.6;
+}
+
+.notice {
+  color: #ffd479;
+  background: rgba(255, 212, 121, 0.1);
+  border: 1px solid rgba(255, 212, 121, 0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .form-actions {
@@ -233,7 +289,8 @@ main {
 }
 
 @media (max-width: 560px) {
-  .item-row {
+  .item-row,
+  .user-row {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -254,6 +311,11 @@ main {
   color: var(--accent);
   background: rgba(56, 232, 198, 0.12);
   white-space: nowrap;
+}
+
+.badge-admin {
+  color: #ffd479;
+  background: rgba(255, 212, 121, 0.14);
 }
 
 .endpoint {
@@ -299,21 +361,29 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* ตารางคำสั่งซื้อ: จำนวน/ยอดรวม ชิดขวา ส่วนชื่อสินค้าตัดบรรทัดได้ */
-#orders-table td:nth-child(3),
-#orders-table td:nth-child(4) {
+/* ตารางคำสั่งซื้อ: จำนวน/ยอดรวม ชิดขวา ส่วนชื่อสินค้าตัดบรรทัดได้
+   คอลัมน์: 1 Order ID · 2 เจ้าของ · 3 สินค้า · 4 จำนวน · 5 ยอดรวม · 6 สถานะ · 7 จัดการ */
+#orders-table td:nth-child(4),
+#orders-table td:nth-child(5) {
   text-align: right;
   white-space: nowrap;
 }
 
-#orders-table td:nth-child(2) {
+#orders-table td:nth-child(3) {
   max-width: 340px;
 }
 
-#orders-table th:nth-child(5),
-#orders-table td:nth-child(5),
+#orders-table th:nth-child(2),
+#orders-table td:nth-child(2),
 #orders-table th:nth-child(6),
-#orders-table td:nth-child(6) {
+#orders-table td:nth-child(6),
+#orders-table th:nth-child(7),
+#orders-table td:nth-child(7) {
+  white-space: nowrap;
+}
+
+#users-table th:last-child,
+#users-table td:last-child {
   white-space: nowrap;
 }
 

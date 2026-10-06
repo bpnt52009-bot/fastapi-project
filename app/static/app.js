@@ -3,8 +3,8 @@ const API_BASE = "";
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "same-origin",
-    headers: { Accept: "application/json", ...(options.headers || {}) },
     ...options,
+    headers: { Accept: "application/json", ...(options.headers || {}) },
   });
 
   if (res.status === 401) {
@@ -79,6 +79,14 @@ function buildRow(values) {
   return tr;
 }
 
+/** ป้ายข้อความสำหรับค่าที่อ่านอย่างเดียว */
+function textBadge(label) {
+  const span = document.createElement("span");
+  span.className = "badge";
+  span.textContent = label;
+  return span;
+}
+
 function renderTable(tbodyId, rows, toCells) {
   const tbody = document.querySelector(`#${tbodyId} tbody`);
   tbody.replaceChildren(...rows.map(toCells));
@@ -117,13 +125,55 @@ function totalQuantity(items) {
   return items.reduce((sum, i) => sum + Number(i.quantity), 0);
 }
 
-/* ---------- สร้างคำสั่งซื้อ ---------- */
+/* ---------- สิทธิ์ของผู้ใช้ที่ล็อกอินอยู่ ---------- */
 
-const itemRows = document.getElementById("item-rows");
-const orderForm = document.getElementById("order-form");
-const orderError = document.getElementById("order-error");
-const createBtn = document.getElementById("create-order-btn");
-const addItemBtn = document.getElementById("add-item-btn");
+const ROLE_LABELS = {
+  admin: "ผู้ดูแลระบบ",
+  user: "ผู้ใช้ทั่วไป (อ่านอย่างเดียว)",
+};
+
+const state = { name: null, role: null, admin: false };
+
+const el = {
+  who: document.getElementById("who"),
+  whoRole: document.getElementById("who-role"),
+  roleNotice: document.getElementById("role-notice"),
+  itemRows: document.getElementById("item-rows"),
+  orderForm: document.getElementById("order-form"),
+  orderError: document.getElementById("order-error"),
+  orderOwner: document.getElementById("order-owner"),
+  createBtn: document.getElementById("create-order-btn"),
+  addItemBtn: document.getElementById("add-item-btn"),
+  userForm: document.getElementById("user-form"),
+  userError: document.getElementById("user-error"),
+  newUsername: document.getElementById("new-username"),
+  newPassword: document.getElementById("new-password"),
+  newRole: document.getElementById("new-role"),
+  createUserBtn: document.getElementById("create-user-btn"),
+  ownerFilter: document.getElementById("owner-filter"),
+};
+
+/** ซ่อน/โชว์ส่วนที่ต้องเป็นผู้ดูแลระบบเท่านั้น ตาม role ที่อ่านจากเซิร์ฟเวอร์ */
+function applyRole() {
+  document.querySelectorAll("[data-admin-only]").forEach((node) => {
+    node.hidden = !state.admin;
+  });
+
+  el.whoRole.hidden = false;
+  el.whoRole.textContent = ROLE_LABELS[state.role] ?? state.role;
+
+  if (state.admin) {
+    el.roleNotice.hidden = true;
+    return;
+  }
+
+  el.roleNotice.hidden = false;
+  el.roleNotice.textContent =
+    `คุณล็อกอินในชื่อ "${state.name}" ด้วยสิทธิ์ผู้ใช้ทั่วไป — ` +
+    "ดูข้อมูลได้อย่างเดียว การสร้าง/แก้ไข/ลบออเดอร์และการจัดการผู้ใช้ต้องเป็นผู้ดูแลระบบเท่านั้น";
+}
+
+/* ---------- สร้างคำสั่งซื้อ ---------- */
 
 function addItemRow(values = { item_name: "", quantity: 1, price: "" }) {
   const row = document.createElement("div");
@@ -155,27 +205,23 @@ function addItemRow(values = { item_name: "", quantity: 1, price: "" }) {
   remove.type = "button";
   remove.className = "btn btn-danger btn-small";
   remove.textContent = "ลบ";
+  remove.setAttribute("aria-label", "ลบแถวสินค้านี้");
   remove.addEventListener("click", () => {
-    if (itemRows.children.length > 1) row.remove();
-    else setFormError("ต้องมีสินค้าอย่างน้อย 1 รายการ");
+    if (el.itemRows.children.length > 1) row.remove();
+    else setFormError(el.orderError, "ต้องมีสินค้าอย่างน้อย 1 รายการ");
   });
 
   row.append(name, qty, price, remove);
-  itemRows.appendChild(row);
+  el.itemRows.appendChild(row);
 }
 
-function setFormError(message) {
-  if (!message) {
-    orderError.hidden = true;
-    orderError.textContent = "";
-    return;
-  }
-  orderError.textContent = message;
-  orderError.hidden = false;
+function setFormError(node, message) {
+  node.hidden = !message;
+  node.textContent = message ?? "";
 }
 
 function collectItems() {
-  return [...itemRows.children].map((row) => {
+  return [...el.itemRows.children].map((row) => {
     const [name, qty, price] = row.querySelectorAll("input");
     return {
       item_name: name.value.trim(),
@@ -185,44 +231,173 @@ function collectItems() {
   });
 }
 
-addItemBtn.addEventListener("click", () => addItemRow());
+el.addItemBtn.addEventListener("click", () => addItemRow());
 
-orderForm.addEventListener("submit", async (event) => {
+el.orderForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  setFormError("");
+  setFormError(el.orderError, "");
 
   const items = collectItems();
-  const invalid = items.find((i) => !i.item_name || !i.price);
-  if (invalid) {
-    setFormError("กรอกชื่อสินค้าและราคาให้ครบทุกแถว");
+  if (items.some((i) => !i.item_name || !i.price)) {
+    setFormError(el.orderError, "กรอกชื่อสินค้าและราคาให้ครบทุกแถว");
     return;
   }
 
-  toggleButton(createBtn, true, "สร้างคำสั่งซื้อ");
+  const owner = el.orderOwner.value;
+  const body = owner ? { user_id: owner, items } : { items };
+
+  toggleButton(el.createBtn, true, "สร้างคำสั่งซื้อ");
   try {
-    await sendJson("/orders", "POST", { items });
-    itemRows.replaceChildren();
+    await sendJson("/orders", "POST", body);
+    el.itemRows.replaceChildren();
     addItemRow();
     setStatus("ok", "สร้างคำสั่งซื้อสำเร็จ");
     await loadOrders();
   } catch (err) {
-    setFormError(err.message);
+    setFormError(el.orderError, err.message);
   } finally {
-    toggleButton(createBtn, false, "สร้างคำสั่งซื้อ");
+    toggleButton(el.createBtn, false, "สร้างคำสั่งซื้อ");
   }
 });
+
+/* ---------- เพิ่มผู้ใช้ ---------- */
+
+el.userForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setFormError(el.userError, "");
+
+  const username = el.newUsername.value.trim();
+  const password = el.newPassword.value;
+
+  if (!username || password.length < 8) {
+    setFormError(el.userError, "กรอกชื่อผู้ใช้ และรหัสผ่านอย่างน้อย 8 ตัว");
+    return;
+  }
+
+  toggleButton(el.createUserBtn, true, "+ เพิ่มผู้ใช้");
+  try {
+    const created = await sendJson("/users", "POST", {
+      username,
+      password,
+      role: el.newRole.value,
+    });
+    el.userForm.reset();
+    setStatus("ok", `สร้างผู้ใช้ "${created.name}" แล้ว`);
+    await loadUsers();
+  } catch (err) {
+    setFormError(el.userError, err.message);
+  } finally {
+    toggleButton(el.createUserBtn, false, "+ เพิ่มผู้ใช้");
+  }
+});
+
+/* ---------- ตารางผู้ใช้ ---------- */
+
+function buildRoleCell(user) {
+  const span = document.createElement("span");
+  span.className = user.role === "admin" ? "badge badge-admin" : "badge";
+  span.textContent = ROLE_LABELS[user.role] ?? user.role;
+  return span;
+}
+
+function buildUserActions(user) {
+  const wrap = document.createElement("div");
+  wrap.className = "row-actions";
+
+  const isSelf = user.name === state.name;
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "btn btn-small";
+  toggle.textContent = user.role === "admin" ? "ลดสิทธิ์" : "ให้สิทธิ์ admin";
+  toggle.disabled = isSelf;
+  toggle.title = isSelf ? "เปลี่ยนสิทธิ์ของตัวเองไม่ได้" : "";
+  toggle.addEventListener("click", async () => {
+    toggleButton(toggle, true, "กำลังบันทึก");
+    try {
+      const next = user.role === "admin" ? "user" : "admin";
+      await sendJson(`/users/${user.id}`, "PATCH", { role: next });
+      setStatus("ok", `เปลี่ยนสิทธิ์ของ ${user.name} เป็น ${next} แล้ว`);
+      await loadUsers();
+    } catch (err) {
+      setStatus("error", err.message);
+      toggleButton(toggle, false);
+    }
+  });
+
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "btn btn-danger btn-small";
+  remove.textContent = "ลบ";
+  remove.disabled = isSelf;
+  remove.title = isSelf ? "ลบบัญชีตัวเองไม่ได้" : "";
+  remove.addEventListener("click", async () => {
+    if (!window.confirm(`ลบผู้ใช้ "${user.name}" และปิด session ทั้งหมดของเขาใช่หรือไม่?`)) return;
+    toggleButton(remove, true, "ลบ");
+    try {
+      await request(`/users/${user.id}`, { method: "DELETE" });
+      setStatus("ok", `ลบผู้ใช้ ${user.name} แล้ว`);
+      await loadUsers();
+    } catch (err) {
+      setStatus("error", err.message);
+      toggleButton(remove, false);
+    }
+  });
+
+  wrap.append(toggle, remove);
+  return wrap;
+}
+
+/** เติมตัวเลือกเจ้าของออเดอร์จากรายชื่อผู้ใช้ (เฉพาะผู้ดูแลระบบ) */
+function fillOwnerSelects(users) {
+  const names = users.map((u) => u.name);
+
+  const owner = new Option("ผม (ผู้ดูแลระบบ)", "");
+  el.orderOwner.replaceChildren(owner);
+  users
+    .filter((u) => u.name !== state.name)
+    .forEach((u) => el.orderOwner.appendChild(new Option(u.name, u.name)));
+  el.orderOwner.value = "";
+
+  const previous = el.ownerFilter.value;
+  el.ownerFilter.replaceChildren(new Option("ทุกเจ้าของ", ""));
+  names.forEach((name) => el.ownerFilter.appendChild(new Option(name, name)));
+  el.ownerFilter.value = names.includes(previous) ? previous : "";
+}
+
+async function loadUsers(button) {
+  if (!state.admin) {
+    document.getElementById("total-users").textContent = "—";
+    return;
+  }
+
+  toggleButton(button, true);
+  try {
+    const users = await getJson("/users");
+    renderTable("users-table", users, (u) =>
+      buildRow([u.id, u.name, buildRoleCell(u), buildUserActions(u)])
+    );
+    document.getElementById("users-empty").hidden = users.length > 0;
+    document.getElementById("total-users").textContent = users.length;
+    fillOwnerSelects(users);
+    setStatus("ok", "API ทำงานปกติ");
+  } catch (err) {
+    setStatus("error", `เรียก /users ไม่สำเร็จ: ${err.message}`);
+  } finally {
+    toggleButton(button, false);
+  }
+}
 
 /* ---------- ตารางคำสั่งซื้อ + การจัดการ ---------- */
 
 function buildStatusControl(order) {
-  const next = NEXT_STATUS[order.status] ?? [];
+  const label = STATUS_LABELS[order.status] ?? order.status;
 
-  if (next.length === 0) {
-    const span = document.createElement("span");
-    span.className = "badge";
-    span.textContent = STATUS_LABELS[order.status] ?? order.status;
-    return span;
-  }
+  // ผู้ใช้ทั่วไปดูอย่างเดียว จึงไม่มี dropdown ให้เปลี่ยนสถานะ
+  if (!state.admin) return textBadge(label);
+
+  const next = NEXT_STATUS[order.status] ?? [];
+  if (next.length === 0) return textBadge(label);
 
   const wrap = document.createElement("div");
   wrap.className = "row-actions";
@@ -234,6 +409,7 @@ function buildStatusControl(order) {
     option.textContent = `เปลี่ยนเป็น ${STATUS_LABELS[value] ?? value}`;
     select.appendChild(option);
   });
+  select.setAttribute("aria-label", `เปลี่ยนสถานะออเดอร์ ${order.id}`);
 
   const save = document.createElement("button");
   save.type = "button";
@@ -248,7 +424,6 @@ function buildStatusControl(order) {
       await loadOrders();
     } catch (err) {
       setStatus("error", err.message);
-    } finally {
       toggleButton(save, false, "บันทึก");
     }
   });
@@ -258,6 +433,8 @@ function buildStatusControl(order) {
 }
 
 function buildDeleteControl(order) {
+  if (!state.admin) return "";
+
   const remove = document.createElement("button");
   remove.type = "button";
   remove.className = "btn btn-danger btn-small";
@@ -273,7 +450,6 @@ function buildDeleteControl(order) {
       await loadOrders();
     } catch (err) {
       setStatus("error", err.message);
-    } finally {
       toggleButton(remove, false, "ยกเลิก");
     }
   });
@@ -281,30 +457,19 @@ function buildDeleteControl(order) {
   return remove;
 }
 
-async function loadUsers(button) {
-  toggleButton(button, true);
-  try {
-    const users = await getJson("/users");
-    renderTable("users-table", users, (u) => buildRow([u.id, u.name]));
-    document.getElementById("users-empty").hidden = users.length > 0;
-    document.getElementById("total-users").textContent = users.length;
-    setStatus("ok", "API ทำงานปกติ");
-  } catch (err) {
-    setStatus("error", `เรียก /users ไม่สำเร็จ: ${err.message}`);
-  } finally {
-    toggleButton(button, false);
-  }
-}
-
 async function loadOrders(button) {
   toggleButton(button, true);
   try {
-    const page = await getJson("/orders");
+    const params = new URLSearchParams();
+    if (state.admin && el.ownerFilter.value) params.set("user", el.ownerFilter.value);
+    const query = params.toString();
+    const page = await getJson(`/orders${query ? `?${query}` : ""}`);
     const orders = page.items ?? page;
 
     renderTable("orders-table", orders, (o) =>
       buildRow([
         o.id,
+        state.admin ? o.user_id : "",
         itemsSummary(o.items),
         totalQuantity(o.items),
         baht.format(Number(o.total_price)),
@@ -346,6 +511,8 @@ document.querySelectorAll("[data-reload]").forEach((button) => {
   button.addEventListener("click", () => loaders[button.dataset.reload](button));
 });
 
+el.ownerFilter.addEventListener("change", () => loadOrders());
+
 document.getElementById("logout-btn").addEventListener("click", async () => {
   try {
     await request("/logout", { method: "POST" });
@@ -354,17 +521,24 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
   }
 });
 
-async function loadUser() {
+/** โหลดโปรไฟล์ตัวเองก่อนข้อมูลอื่น เพื่อรู้ role ว่าจะโชว์อะไรได้บ้าง */
+async function start() {
   try {
-    const res = await getJson("/me");
-    document.getElementById("who").textContent = res.user ? `ผู้ใช้: ${res.user}` : "";
+    const me = await getJson("/users/me");
+    state.name = me.name;
+    state.role = me.role;
+    state.admin = me.role === "admin";
+    el.who.textContent = `ผู้ใช้: ${me.name}`;
   } catch {
-    document.getElementById("who").textContent = "";
+    window.location.href = "/login";
+    return;
   }
+
+  applyRole();
+  addItemRow();
+  await loadUsers();
+  await loadOrders();
+  await loadRoot();
 }
 
-addItemRow();
-loadUser();
-loadUsers();
-loadOrders();
-loadRoot();
+start();
