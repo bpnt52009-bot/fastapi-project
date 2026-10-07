@@ -1,45 +1,22 @@
 ### ============================================
-### Cyber-sec FAST-API - Complete Reference (Admin)
+### Cyber-sec FAST-API - สคริปต์สั้น ๆ สำหรับนำเสนอ
 ### URL: http://localhost:8000
 ### ============================================
-### ต้องมี VS Code REST Client (humao.rest-client)
-### ใช้งาน: คลิก "Send Request" เหนือบล็อกที่ต้องการ
-###
-### !!! ระบบนี้ใช้ COOKIE SESSION ไม่ใช่ Bearer token !!!
-### REST Client จะจำ cookie ให้เองอัตโนมัติ (ตราบใดที่ยังไม่หมดอายุ)
-###   -> คำขอแรกต้องเป็น POST /login เสมอ
-###   -> หลังจากนั้นทุกคำขอจะแนบ cookie ให้เอง ไม่ต้องใส่ Authorization
-###   -> ถ้าคุณล็อกอินคนอื่นทับ cookie เดิม ระบบจะถือว่าคุณเป็นคนนั้นทันที
-###
-### !! ระวัง: api.http กับ api-user.http ใช้ host เดียวกัน cookie จะชนกัน !!
-###   ให้รันไฟล์นี้ให้จบก่อน แล้วค่อยเปิดอีกไฟล์
-###
-### ค่าจาก .env (อ่านผ่าน {{$dotenv VAR}})
-###   ถ้ายังไม่มี .env: Copy-Item .env.example .env
+### ระบบใช้ COOKIE SESSION (ไม่ใช่ Bearer token)
+### REST Client จำ cookie ให้เอง -> ต้อง POST /login เป็นข้อแรกเสมอ
+### ค่าจาก .env อ่านผ่าน {{$dotenv VAR}}
 ### ============================================
 
 @host = http://localhost:8000
 @demoUser = somchai
 @demoUserPass = somchai-1234
 
-### ============================================
-### ลำดับที่แนะนำให้กดตาม
-###   1.1  Login
-###   1.2  สร้าง user (เก็บ id ไว้ให้ข้อ 1.3)
-###   1.3 - 1.6  จัดการ user
-###   2.x  จัดการคำสั่งซื้อ
-###   3.x  ทดสอบว่า anonymous ถูกปฏิเสธ
-### ============================================
-
 
 ### ============================================
-### ADMIN API
+### ADMIN - ผู้ดูแลระบบ
 ### ============================================
 
-## 1. Admin
-
-### 1.1 [Admin] Login - ล็อกอินเป็นผู้ดูแลระบบ (ต้องทำข้อนี้ก่อนทุกข้อ)
-### ตอบ 200 พร้อมตั้ง cookie ชื่อ "session"
+### 1.1 [Admin] Login -> 200 + ตั้ง cookie session
 POST {{host}}/login
 Content-Type: application/json
 
@@ -48,30 +25,7 @@ Content-Type: application/json
     "password": "{{$dotenv ADMIN_PASSWORD}}"
 }
 
-### 1.1.1 [ทดสอบ] Login ผิด - ต้องได้ 401 ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง
-POST {{host}}/login
-Content-Type: application/json
-
-{
-    "username": "{{$dotenv ADMIN_USERNAME}}",
-    "password": "wrong-password-here"
-}
-
-### 1.1.2 [ทดสอบ] Login ซ้ำ 5 ครั้งผิด - ครั้งที่ 6 ต้องได้ 429 + Retry-After
-### ระวัง: หลังจากกดข้อนี้ บัญชีนี้จะถูกล็อกชั่วคราว ให้รอ LOGIN_LOCKOUT_SECONDS (900 วิ)
-POST {{host}}/login
-Content-Type: application/json
-
-{
-    "username": "rate-limit-test",
-    "password": "wrong-password-here"
-}
-
-### 1.2 [Admin] โปรไฟล์ตัวเอง - ดู role ของตัวเอง (ต้องเป็น admin)
-GET {{host}}/users/me
-
-### 1.3 [Admin] สร้าง user ใหม่ (สิทธิ์ user = ดูข้อมูลอย่างเดียว)
-### คำสั่งนี้จะเก็บ response ไว้ใช้ต่อในข้อ 1.5 - 1.8
+### 1.2 [Admin] สร้างผู้ใช้ใหม่ (role=user) -> 201
 ### @name createUser
 POST {{host}}/users
 Content-Type: application/json
@@ -82,109 +36,18 @@ Content-Type: application/json
     "role": "user"
 }
 
-### 1.3.1 [Admin] สร้างชื่อซ้ำ - ต้องได้ 409
-POST {{host}}/users
-Content-Type: application/json
-
-{
-    "username": "{{demoUser}}",
-    "password": "{{demoUserPass}}",
-    "role": "user"
-}
-
-### 1.3.2 [ทดสอบ] รหัสผ่านสั้นเกิน 8 ตัว - ต้องได้ 422
-POST {{host}}/users
-Content-Type: application/json
-
-{
-    "username": "weakpass",
-    "password": "123",
-    "role": "user"
-}
-
-### 1.3.3 [ทดสอบ] สร้างชื่อที่สงวนไว้ของ bootstrap - ต้องได้ 409
-POST {{host}}/users
-Content-Type: application/json
-
-{
-    "username": "{{$dotenv ADMIN_USERNAME}}",
-    "password": "{{demoUserPass}}",
-    "role": "admin"
-}
+### 1.3 [Admin] ดูโปรไฟล์ตัวเอง + ดูผู้ใช้ทั้งหมด
+GET {{host}}/users/me
 
 ### 1.4 [Admin] ดูผู้ใช้ทั้งหมด
 GET {{host}}/users
 
-### 1.5 [Admin] ดูผู้ใช้ตาม id (ใช้ id จากข้อ 1.3)
-GET {{host}}/users/{{createUser.response.body.$.id}}
-
-### 1.6 [Admin] เปลี่ยนสิทธิ์ user เป็น admin
-PATCH {{host}}/users/{{createUser.response.body.$.id}}
-Content-Type: application/json
-
-{
-    "role": "admin"
-}
-
-### 1.6.1 [Admin] เปลี่ยนสิทธิ์กลับเป็น user
-PATCH {{host}}/users/{{createUser.response.body.$.id}}
-Content-Type: application/json
-
-{
-    "role": "user"
-}
-
-### 1.7 [Admin] เปลี่ยนรหัสผ่าน - session เดิมของเขาจะถูกปิดทันที
-### ต้อง login ใหม่หลังข้อนี้
-PATCH {{host}}/users/{{createUser.response.body.$.id}}
-Content-Type: application/json
-
-{
-    "password": "{{demoUserPass}}-changed"
-}
-
-### 1.7.1 [Admin] เปลี่ยนรหัสผ่านกลับ
-PATCH {{host}}/users/{{createUser.response.body.$.id}}
-Content-Type: application/json
-
-{
-    "password": "{{demoUserPass}}"
-}
-
-### 1.7.2 [ทดสอบ] PATCH ที่ไม่ส่งฟิลด์เลย - ต้องได้ 422
-PATCH {{host}}/users/{{createUser.response.body.$.id}}
-Content-Type: application/json
-
-{
-}
-
-### 1.7.3 [ทดสอบ] เปลี่ยนสิทธิ์บัญชีตัวเอง - ต้องได้ 409
-### (ต้องหา id ของ Admin จากข้อ 1.4 มาแทน 1)
-PATCH {{host}}/users/1
-Content-Type: application/json
-
-{
-    "role": "user"
-}
-
-### 1.8 [Admin] ลบผู้ใช้ - session ทั้งหมดของเขาจะถูกปิด
-### ถ้าจะทดสอบข้อ 1.8.1 ต้อง login เป็น {{demoUser}} ก่อน แล้วค่อยกลับมา login admin
-DELETE {{host}}/users/{{createUser.response.body.$.id}}
-
-### 1.8.1 [ทดสอบ] ลบซ้ำ - ต้องได้ 404
-DELETE {{host}}/users/{{createUser.response.body.$.id}}
-
-### 1.9 [ทดสอบ] ลบบัญชีตัวเอง - ต้องได้ 409
-DELETE {{host}}/users/1
-
 
 ### ============================================
-### ORDER API (admin ทำได้ทุกอย่าง)
+### ORDER - คำสั่งซื้อ
 ### ============================================
 
-## 2. Order
-
-### 2.1 [Admin] สร้างคำสั่งซื้อให้ตัวเอง
+### 2.1 [Admin] สร้างคำสั่งซื้อ -> 201 (สถานะเริ่มต้น pending)
 ### @name createOrder
 POST {{host}}/orders
 Content-Type: application/json
@@ -196,46 +59,13 @@ Content-Type: application/json
     ]
 }
 
-### 2.2 [Admin] สร้างคำสั่งซื้อให้ผู้ใช้อื่น (ใส่ user_id)
-### ต้องมีผู้ใช้นั้นอยู่จริง ไม่งั้นได้ 404
-POST {{host}}/orders
-Content-Type: application/json
-
-{
-    "user_id": "{{createUser.response.body.$.name}}",
-    "items": [
-        { "item_name": "จอมอนิเตอร์", "quantity": 1, "price": "5500.00" }
-    ]
-}
-
-### 2.2.1 [ทดสอบ] สร้างให้ผู้ใช้ที่ไม่มีอยู่ - ต้องได้ 404
-POST {{host}}/orders
-Content-Type: application/json
-
-{
-    "user_id": "ไม่มีผู้ใช้นี้",
-    "items": [
-        { "item_name": "เมาส์", "quantity": 1, "price": "499.00" }
-    ]
-}
-
-### 2.3 [Admin] ดูออเดอร์ทั้งหมด (ของทุกคน)
+### 2.2 [Admin] ดูออเดอร์ทั้งหมด + กรองสถานะ
 GET {{host}}/orders
 
-### 2.4 [Admin] กรองตามสถานะ
+### 2.3 [Admin] กรองเฉพาะออเดอร์ pending
 GET {{host}}/orders?status=pending
 
-### 2.5 [Admin] กรองตามเจ้าของ
-GET {{host}}/orders?user={{createUser.response.body.$.name}}
-
-### 2.6 [Admin] แบ่งหน้า
-GET {{host}}/orders?limit=10&offset=0
-
-### 2.7 [Admin] ดูออเดอร์ตาม id
-GET {{host}}/orders/{{createOrder.response.body.$.id}}
-
-### 2.8 [Admin] เปลี่ยนสถานะ: pending -> paid
-### @name payOrder
+### 2.4 [Admin] เปลี่ยนสถานะ: pending -> paid
 PATCH {{host}}/orders/{{createOrder.response.body.$.id}}/status
 Content-Type: application/json
 
@@ -243,73 +73,19 @@ Content-Type: application/json
     "status": "paid"
 }
 
-### 2.8.1 [Admin] เปลี่ยนสถานะต่อ: paid -> shipped
-PATCH {{host}}/orders/{{createOrder.response.body.$.id}}/status
-Content-Type: application/json
-
-{
-    "status": "shipped"
-}
-
-### 2.8.2 [Admin] เปลี่ยนสถานะต่อ: shipped -> completed (สถานะสุดท้าย)
-PATCH {{host}}/orders/{{createOrder.response.body.$.id}}/status
-Content-Type: application/json
-
-{
-    "status": "completed"
-}
-
-### 2.8.3 [ทดสอบ] completed แล้วย้อนกลับไป cancelled ไม่ได้ - ต้องได้ 409
-PATCH {{host}}/orders/{{createOrder.response.body.$.id}}/status
-Content-Type: application/json
-
-{
-    "status": "cancelled"
-}
-
-### 2.8.4 [ทดสอบ] สถานะที่ไม่มีจริง - ต้องได้ 422
-PATCH {{host}}/orders/{{createOrder.response.body.$.id}}/status
-Content-Type: application/json
-
-{
-    "status": "teleported"
-}
-
-### 2.9 [Admin] ยกเลิก/ลบคำสั่งซื้อ
-DELETE {{host}}/orders/{{createOrder.response.body.$.id}}
-
-### 2.9.1 [ทดสอบ] ลบซ้ำ - ต้องได้ 404
-DELETE {{host}}/orders/{{createOrder.response.body.$.id}}
+### 2.5 [ทดสอบ API] User สร้างออเดอร์ได้ (ดูใน api-user.http)
+### (สลับไปทดสอบฝั่ง admin ได้โดยกดข้อ 1.1 Login ใหม่เสมอ)
 
 
 ### ============================================
-### ANONYMOUS - ทุกอย่างต้องได้ 401
-### (ถ้าเคย login ไว้ cookie ยังอยู่ ให้กด 3.1 Logout ก่อนเพื่อทดสอบส่วนนี้)
+### ANONYMOUS - หลัง logout ทุกอย่างต้องได้ 401
 ### ============================================
 
-## 3. Anonymous
-
-### 3.1 [Admin] Logout - revoke session จริง (หลังจากนี้ทุกคำขอจะได้ 401)
+### 3.1 [Admin] Logout -> revoke session จริง
 POST {{host}}/logout
 
-### 3.2 [Anonymous] ดูผู้ใช้ - ต้องได้ 401
-GET {{host}}/users
-
-### 3.3 [Anonymous] ดูออเดอร์ - ต้องได้ 401
+### 3.2 [Anonymous] ดูออเดอร์หลัง logout -> ต้องได้ 401
 GET {{host}}/orders
 
-### 3.4 [Anonymous] ดูโปรไฟล์ตัวเอง - ต้องได้ 401
-GET {{host}}/users/me
-
-### 3.5 [Anonymous] สร้างออเดอร์ - ต้องได้ 401
-POST {{host}}/orders
-Content-Type: application/json
-
-{
-    "items": [
-        { "item_name": "เมาส์", "quantity": 1, "price": "499.00" }
-    ]
-}
-
-### 3.6 [Anonymous] เข้าถึงหน้าเว็บที่ยัง public ได้ (ตรวจว่า security header ติด)
-GET {{host}}/health
+### 3.3 [Anonymous] ดูผู้ใช้หลัง logout -> ต้องได้ 401
+GET {{host}}/users
