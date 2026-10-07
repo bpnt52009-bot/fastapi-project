@@ -210,15 +210,26 @@ class TestOwnershipIsolation:
         seen_by_admin = [o["id"] for o in admin_client.get("/orders").json()["items"]]
         assert set(seen_by_admin) == {mine, theirs}
 
-    def test_user_cannot_mutate_orders_at_all(self, admin_client, other_client):
+    def test_user_can_create_own_order_but_not_for_others(self, other_client):
+        # ผู้ใช้ทั่วไปสร้างออเดอร์ของตัวเองได้
+        response = other_client.post("/orders", json={"items": [DEFAULT_ITEM]})
+        assert response.status_code == 201
+        assert response.json()["status"] == "pending"
+        assert response.json()["user_id"] == "Other"
+
+        # แต่บังคับระบุเจ้าของเป็นคนอื่นไม่ได้ กันการสร้างออเดอร์แทนคนอื่น
+        response = other_client.post(
+            "/orders", json={"user_id": "Admin", "items": [DEFAULT_ITEM]}
+        )
+        assert response.status_code == 403
+
+    def test_user_cannot_change_status_or_delete(self, admin_client, other_client):
         order_id = create_order(admin_client, owner="Other").json()["id"]
 
-        # ผู้ใช้ทั่วไปไม่มีสิทธิ์เปลี่ยนแปลงอะไรได้เลย
-        assert other_client.post("/orders", json={"items": [DEFAULT_ITEM]}).status_code == 403
+        # ผู้ใช้ทั่วไปเปลี่ยนสถานะ / ลบออเดอร์ไม่ได้
         assert (
-            other_client.patch(
-                f"/orders/{order_id}/status", json={"status": "paid"}
-            ).status_code
+            other_client.patch(f"/orders/{order_id}/status", json={"status": "paid"})
+            .status_code
             == 403
         )
         assert other_client.delete(f"/orders/{order_id}").status_code == 403

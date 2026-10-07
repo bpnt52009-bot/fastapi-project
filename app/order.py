@@ -191,11 +191,17 @@ def _not_found() -> HTTPException:
     status_code=status.HTTP_201_CREATED,
     include_in_schema=False,
 )
-def create_order(payload: OrderCreate, user_name: str = Depends(require_admin)):
-    """สร้างออเดอร์ — เฉพาะผู้ดูแลระบบเท่านั้น (ผู้ใช้ทั่วไปอ่านอย่างเดียว)
+def create_order(payload: OrderCreate, user_name: str = Depends(require_user)):
+    """สร้างออเดอร์ — ผู้ที่ล็อกอินทุกคนสร้างออเดอร์ของตัวเองได้
 
-    ถ้าไม่ระบุ user_id ออเดอร์จะตกอยู่ในชื่อผู้ดูแล ถ้าระบุต้องเป็นผู้ใช้ที่มีอยู่จริง
+    ผู้ดูแลระบบสามารถเลือกเจ้าของออเดอร์ได้ (user_id) แต่ผู้ใช้ทั่วไปถูกบังคับ
+    ให้เป็นชื่อตัวเองเสมอ เพราะไม่ควรสร้างออเดอร์แทนคนอื่นได้
     """
+    if not is_admin(user_name) and payload.user_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ระบุเจ้าของออเดอร์ได้เฉพาะผู้ดูแลระบบเท่านั้น",
+        )
     owner = payload.user_id or user_name
     total = sum((to_cents(item.price) * item.quantity for item in payload.items), 0)
     items_json = json.dumps(

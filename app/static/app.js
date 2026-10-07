@@ -129,7 +129,7 @@ function totalQuantity(items) {
 
 const ROLE_LABELS = {
   admin: "ผู้ดูแลระบบ",
-  user: "ผู้ใช้ทั่วไป (อ่านอย่างเดียว)",
+  user: "ผู้ใช้ทั่วไป",
 };
 
 const state = { name: null, role: null, admin: false };
@@ -170,7 +170,7 @@ function applyRole() {
   el.roleNotice.hidden = false;
   el.roleNotice.textContent =
     `คุณล็อกอินในชื่อ "${state.name}" ด้วยสิทธิ์ผู้ใช้ทั่วไป — ` +
-    "ดูข้อมูลได้อย่างเดียว การสร้าง/แก้ไข/ลบออเดอร์และการจัดการผู้ใช้ต้องเป็นผู้ดูแลระบบเท่านั้น";
+    "สร้างและดูออเดอร์ของตัวเองได้ การจัดการผู้ใช้ การเปลี่ยนสถานะและการสั่งยกเลิกออเดอร์ต้องเป็นผู้ดูแลระบบเท่านั้น";
 }
 
 /* ---------- สร้างคำสั่งซื้อ ---------- */
@@ -243,7 +243,7 @@ el.orderForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const owner = el.orderOwner.value;
+  const owner = state.admin ? el.orderOwner.value : "";
   const body = owner ? { user_id: owner, items } : { items };
 
   toggleButton(el.createBtn, true, "สร้างคำสั่งซื้อ");

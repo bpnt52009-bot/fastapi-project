@@ -47,14 +47,14 @@
 
     <p class="notice" id="role-notice" hidden></p>
 
-    <section class="panel" data-admin-only hidden>
+    <section class="panel">
       <div class="panel-head">
         <h2>สร้างคำสั่งซื้อ</h2>
       </div>
       <p class="endpoint">POST <code>/orders</code></p>
 
       <form id="order-form">
-        <label class="field">
+        <label class="field" data-admin-only hidden>
           <span>เจ้าของออเดอร์</span>
           <select id="order-owner" aria-label="เจ้าของออเดอร์"></select>
         </label>
@@ -79,7 +79,7 @@
           <input type="text" id="new-username" placeholder="ชื่อผู้ใช้" maxlength="64" autocomplete="off" aria-label="ชื่อผู้ใช้ใหม่" />
           <input type="password" id="new-password" placeholder="รหัสผ่าน (อย่างน้อย 8 ตัว)" minlength="8" maxlength="256" autocomplete="new-password" aria-label="รหัสผ่านของผู้ใช้ใหม่" />
           <select id="new-role" aria-label="สิทธิ์ของผู้ใช้ใหม่">
-            <option value="user">user — ดูข้อมูลอย่างเดียว</option>
+            <option value="user">user — สร้าง/ดูออเดอร์ของตัวเองได้</option>
             <option value="admin">admin — จัดการได้ทั้งหมด</option>
           </select>
           <button class="btn btn-primary" type="submit" id="create-user-btn">+ เพิ่มผู้ใช้</button>
